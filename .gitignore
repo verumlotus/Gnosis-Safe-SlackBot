@@ -3,3 +3,5 @@
 iac/*
 !iac/main.tf
 *.zip
+.DS_Store
+app/.DS_Store

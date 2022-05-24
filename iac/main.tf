@@ -47,15 +47,28 @@ resource "aws_iam_role_policy_attachment" "attach_iam_policy_to_iam_role" {
  role        = aws_iam_role.lambda_role.name
  policy_arn  = aws_iam_policy.iam_policy_for_lambda.arn
 }
+
+# data "archive_file" "zip_python_dependencies" {
+# type        = "zip"
+# source_dir  = "${path.module}/../.venv/lib/python3.9/site-packages/"
+# output_path = "${path.module}/../app/dependencies.zip"
+# }
  
-data "archive_file" "zip_the_python_code" {
-type        = "zip"
-source_dir  = "${path.module}/../app/"
-output_path = "${path.module}/../app/slackbot.zip"
+# data "archive_file" "zip_the_python_code" {
+# type        = "zip"
+# source_dir  = "${path.module}/../app/"
+# output_path = "${path.module}/../app/slackbot.zip"
+# }
+
+resource "null_resource" "zip_python_code_and_dependencies" {
+    provisioner "local-exec" {
+
+    command = "/bin/zsh ../scripts/create_zip.sh"
+  }
 }
  
 resource "aws_lambda_function" "terraform_lambda_func" {
-filename                       = "${path.module}/../app/slackbot.zip"
+filename                       = "../app/slackbot.zip"
 function_name                  = "gnosis_safe_slackbot_lambda_function"
 role                           = aws_iam_role.lambda_role.arn
 handler                        = "bot.post_slack_message"
