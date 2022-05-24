@@ -79,4 +79,8 @@ def augment_info_txs(parsed_txs: list[dict]) -> None:
         if json_response.get('result'):
            tx['contractName'] = json_response.get("ContractName", "Unknown")
 
-fetch_queued_transactions()
+def get_parsed_queued_transactions() -> list[dict]:
+    parsed_transactions = fetch_queued_transactions();
+    augment_info_txs(parsed_txs=parsed_transactions)
+    return parsed_transactions
+
