@@ -1,3 +1,4 @@
+import json
 import os
 import requests
 from dotenv import load_dotenv
@@ -7,6 +8,7 @@ load_dotenv()
 # Python will raise KeyError is env vars are not set
 SAFE_ADDRESS = os.environ['GNOSIS_SAFE_ADDRESS']
 ETHERSCAN_API_KEY = os.environ['ETHERSCAN_API_KEY']
+SLACK_WEBHOOK_URL = os.environ['SLACK_WEBHOOK_URL']
 
 # Limit the number of transactions that we query for
 TX_LIMIT = 100
@@ -46,7 +48,7 @@ def fetch_queued_transactions() -> list:
     parsed_transactions = list()
     for tx in queued_transactions:
         confirmations = tx.get('confirmations')
-        signatures_remaining = threshold - confirmations if confirmations else 'unknown'
+        signatures_remaining = threshold - len(confirmations) if confirmations else 'unknown'
         parsed_tx = {
             'safe': tx.get('safe'),
             'to': tx.get('to'),
@@ -84,3 +86,17 @@ def get_parsed_queued_transactions() -> list[dict]:
     augment_info_txs(parsed_txs=parsed_transactions)
     return parsed_transactions
 
+def post_slack_message():
+    queued_txs = get_parsed_queued_transactions()
+    text_to_send = f'There are {len(queued_txs)} total queued transactions\n\n'
+
+    for i in range(0, len(queued_txs)):
+        tx = queued_txs[i]
+        text_to_send += '-' * 5 + f'Transaction #{i}' + '-' * 5 + "\n"
+        fields = json.dumps(tx, indent=4).split(',')
+        text_to_send += "\n".join(fields)
+        text_to_send += "\n" + '-' * 10
+        
+    requests.post(url=SLACK_WEBHOOK_URL, json={'text': text_to_send})
+
+post_slack_message()
