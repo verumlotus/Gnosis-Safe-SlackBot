@@ -5,7 +5,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Python will raise KeyError is env vars are not set
-safe_address = os.environ['GNOSIS_SAFE_ADDRESS']
+SAFE_ADDRESS = os.environ['GNOSIS_SAFE_ADDRESS']
+ETHERSCAN_API_KEY = os.environ['ETHERSCAN_API_KEY']
 
 # Limit the number of transactions that we query for
 TX_LIMIT = 100
@@ -14,9 +15,12 @@ TX_LIMIT = 100
 class FetchTransactionsException(Exception):
     pass
 
+class FetchEtherScanException(Exception):
+    pass
+
 def fetch_queued_transactions() -> list:
     # Get the latest nonce of this safe
-    url = f'https://safe-transaction.gnosis.io/api/v1/safes/{safe_address}/'
+    url = f'https://safe-transaction.gnosis.io/api/v1/safes/{SAFE_ADDRESS}/'
     response = requests.get(url=url)
     if not response.status_code == 200:
         raise FetchTransactionsException
@@ -25,7 +29,7 @@ def fetch_queued_transactions() -> list:
     threshold = json_respose['threshold']
 
     # Fetch transactions 
-    url = f'https://safe-transaction.gnosis.io/api/v1/safes/{safe_address}/all-transactions/'
+    url = f'https://safe-transaction.gnosis.io/api/v1/safes/{SAFE_ADDRESS}/all-transactions/'
     params = {
         'limit': str(TX_LIMIT), 
         'executed': 'false', 
@@ -49,12 +53,30 @@ def fetch_queued_transactions() -> list:
             'data': tx.get('data'),
             'submissionDate': tx.get('submissionDate'),
             'dataDecoded': tx.get('dataDecoded'),
-            'signaturesRemaining': signatures_remaining
+            'signaturesRemaining': signatures_remaining,
+            'transfers': tx.get('transfers')
         }
         parsed_transactions.append(parsed_tx)
     print(parsed_transactions)
     return parsed_transactions
 
-
+def augment_info_txs(parsed_txs: list[dict]) -> None:
+    """Modifies the passed in list of dictionaries with additiona info for each tx"""
+    # Add the contract name if it is verified and available on Etherscan
+    url = f'https://api.etherscan.io/api/'
+    for tx in parsed_txs:
+        params = {
+            'module': 'contract', 
+            'action': 'getsourcecode', 
+            'address': tx.get('to'),
+            'apikey': ETHERSCAN_API_KEY
+        }
+        response = requests.get(url=url, params=params)
+        if response.status_code != 200:
+            raise FetchEtherScanException
+        json_response = response.json()
+        tx['contractName'] = "Unknown"
+        if json_response.get('result'):
+           tx['contractName'] = json_response.get("ContractName", "Unknown")
 
 fetch_queued_transactions()
