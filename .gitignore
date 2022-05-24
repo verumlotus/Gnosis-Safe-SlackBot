@@ -1,2 +1,5 @@
 .venv
 .env
+iac/*
+!iac/main.tf
+*.zip

@@ -96,7 +96,5 @@ def post_slack_message():
         fields = json.dumps(tx, indent=4).split(',')
         text_to_send += "\n".join(fields)
         text_to_send += "\n" + '-' * 10
-        
-    requests.post(url=SLACK_WEBHOOK_URL, json={'text': text_to_send})
 
-post_slack_message()
+    requests.post(url=SLACK_WEBHOOK_URL, json={'text': text_to_send})
